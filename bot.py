@@ -32,7 +32,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def send_welcome(message):
     bot.reply_to(
         message, 
-        "👋 Hey! Send me a link to a video (TikTok, YouTube, Instagram, etc.), and I will download it in high quality for you!"
+        "👋 Hey! Send me a video link, and I will download it as an uncompressed FILE to preserve maximum quality!"
     )
 
 @bot.message_handler(func=lambda message: True)
@@ -48,16 +48,28 @@ def download_video(message):
     os.makedirs("downloads", exist_ok=True)
     output_template = "downloads/%(title)s_%(id)s.%(ext)s"
     
+    # Advanced options to spoof mobile devices and bypass blocks
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': output_template,
         'merge_output_format': 'mp4',
         'quiet': True,
         'no_warnings': True,
+        'nocheckcertificate': True,
+        'headers': {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+        },
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios'], # Simulates phone apps to bypass YouTube's bot wall
+            }
+        }
     }
 
     try:
-        bot.edit_message_text("📥 Downloading video layers...", message.chat.id, status_msg.message_id)
+        bot.edit_message_text("📥 Downloading layers...", message.chat.id, status_msg.message_id)
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
@@ -68,11 +80,11 @@ def download_video(message):
             mp4_filename = f"{base}.mp4"
             final_file = mp4_filename if os.path.exists(mp4_filename) else filename
 
-        # Telegram bot API has a strict 50MB file size limit for uploads
+        # Check file size (Telegram Bot API limit is 50MB)
         file_size_mb = os.path.getsize(final_file) / (1024 * 1024)
         if file_size_mb > 50:
             bot.edit_message_text(
-                f"⚠️ Video is too large ({file_size_mb:.1f}MB). Telegram bots cannot upload files over 50MB.", 
+                f"⚠️ File is too large ({file_size_mb:.1f}MB). Telegram restricts bot uploads to 50MB.", 
                 message.chat.id, 
                 status_msg.message_id
             )
@@ -80,9 +92,11 @@ def download_video(message):
                 os.remove(final_file)
             return
 
-        bot.edit_message_text("📤 Uploading your video... almost there!", message.chat.id, status_msg.message_id)
-        with open(final_file, "rb") as video:
-            bot.send_video(message.chat.id, video, timeout=120)
+        bot.edit_message_text("📤 Sending uncompressed file...", message.chat.id, status_msg.message_id)
+        
+        # Swapped send_video for send_document to send as an actual file!
+        with open(final_file, "rb") as video_file:
+            bot.send_document(message.chat.id, video_file, timeout=180)
         
         # Clean up disk space
         os.remove(final_file)
@@ -90,7 +104,7 @@ def download_video(message):
 
     except Exception as e:
         bot.edit_message_text(
-            "❌ Error downloading video. The link might be private, unsupported, or temporarily down.", 
+            "❌ Error downloading video. The link might be private, blocked by the host, or temporarily down.", 
             message.chat.id, 
             status_msg.message_id
         )
