@@ -6,10 +6,10 @@ import telebot
 import yt_dlp
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 
-# Force update yt-dlp on every boot
-subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"])
+# Ensure dependencies are up to date
+subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp", "quickjs"])
 
-# --- HEALTH CHECK SERVER ---
+# --- HEALTH CHECK ---
 def run_health_server():
     class HealthHandler(SimpleHTTPRequestHandler):
         def do_GET(self):
@@ -31,10 +31,8 @@ def download_video(message):
     url = message.text
     if not url.startswith("http"): return
 
-    status_msg = bot.reply_to(message, "⚡ Downloading...")
-    os.makedirs("downloads", exist_ok=True)
+    status_msg = bot.reply_to(message, "⚡ Processing...")
     
-    # CORRECTED STEALTH CONFIGURATION
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': 'downloads/%(title)s_%(id)s.%(ext)s',
@@ -42,14 +40,11 @@ def download_video(message):
         'quiet': False,
         'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        # Force the use of the JS runtime
         'extractor_args': {
             'youtube': {
                 'player_client': ['web'],
             }
-        },
-        'headers': {
-            'Referer': 'https://www.youtube.com/',
-            'Accept-Language': 'en-US,en;q=0.9',
         },
     }
     
@@ -57,8 +52,9 @@ def download_video(message):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            base, _ = os.path.splitext(filename)
-            final_file = f"{base}.mp4" if os.path.exists(f"{base}.mp4") else filename
+            # Handle potential file extension changes
+            final_file = filename.rsplit('.', 1)[0] + ".mp4"
+            if not os.path.exists(final_file): final_file = filename
 
         with open(final_file, "rb") as video_file:
             bot.send_document(message.chat.id, video_file, disable_content_type_detection=True)
