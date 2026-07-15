@@ -49,7 +49,7 @@ def download_video(message):
     os.makedirs("downloads", exist_ok=True)
     output_template = "downloads/%(title)s_%(id)s.%(ext)s"
     
-    # Advanced spoofing options using TV and Android clients to bypass datacenter blocks
+    # Base configuration for yt-dlp
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': output_template,
@@ -64,11 +64,19 @@ def download_video(message):
         },
         'extractor_args': {
             'youtube': {
-                'player_client': ['tvhtml5', 'android'], # Uses TV client bypass to slip past the datacenter block
+                'player_client': ['tvhtml5', 'android'],
                 'player_skip': ['configs', 'webpage'],
             }
         }
     }
+
+    # Automatically load cookies if they exist in the repository
+    cookies_file = "cookies.txt"
+    if os.path.exists(cookies_file):
+        ydl_opts['cookiefile'] = cookies_file
+        print("Using exported cookies to bypass bot blocks!")
+    else:
+        print("No cookies.txt found. Proceeding without session cookies.")
 
     try:
         bot.edit_message_text("📥 Downloading layers...", message.chat.id, status_msg.message_id)
@@ -96,7 +104,7 @@ def download_video(message):
 
         bot.edit_message_text("📤 Sending uncompressed file...", message.chat.id, status_msg.message_id)
         
-        # We added 'disable_content_type_detection=True' to force the pure file-card look!
+        # Sends file as a clean, raw document file card
         with open(final_file, "rb") as video_file:
             bot.send_document(
                 message.chat.id, 
