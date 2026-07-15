@@ -30,6 +30,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
+    # Keeping your custom welcome message!
     bot.reply_to(
         message, 
         "👋 Hey! Send me a video link!"
@@ -95,9 +96,14 @@ def download_video(message):
 
         bot.edit_message_text("📤 Sending uncompressed file...", message.chat.id, status_msg.message_id)
         
-        # Swapped out send_video for send_document to force the file-card look!
+        # We added 'disable_content_type_detection=True' to force the pure file-card look!
         with open(final_file, "rb") as video_file:
-            bot.send_document(message.chat.id, video_file, timeout=180)
+            bot.send_document(
+                message.chat.id, 
+                video_file, 
+                timeout=180, 
+                disable_content_type_detection=True
+            )
         
         # Clean up disk space
         os.remove(final_file)
