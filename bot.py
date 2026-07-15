@@ -32,7 +32,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def send_welcome(message):
     bot.reply_to(
         message, 
-        "👋 Hey! Send me a video link, and I will download it as an uncompressed FILE to preserve maximum quality!"
+        "👋 Hey! Send me a video link!"
     )
 
 @bot.message_handler(func=lambda message: True)
@@ -48,7 +48,7 @@ def download_video(message):
     os.makedirs("downloads", exist_ok=True)
     output_template = "downloads/%(title)s_%(id)s.%(ext)s"
     
-    # Advanced options to spoof mobile devices and bypass blocks
+    # Advanced spoofing options using TV and Android clients to bypass datacenter blocks
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': output_template,
@@ -57,13 +57,14 @@ def download_video(message):
         'no_warnings': True,
         'nocheckcertificate': True,
         'headers': {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
         },
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios'], # Simulates phone apps to bypass YouTube's bot wall
+                'player_client': ['tvhtml5', 'android'], # Uses TV client bypass to slip past the datacenter block
+                'player_skip': ['configs', 'webpage'],
             }
         }
     }
@@ -94,7 +95,7 @@ def download_video(message):
 
         bot.edit_message_text("📤 Sending uncompressed file...", message.chat.id, status_msg.message_id)
         
-        # Swapped send_video for send_document to send as an actual file!
+        # Swapped out send_video for send_document to force the file-card look!
         with open(final_file, "rb") as video_file:
             bot.send_document(message.chat.id, video_file, timeout=180)
         
