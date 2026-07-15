@@ -31,10 +31,10 @@ def download_video(message):
     url = message.text
     if not url.startswith("http"): return
 
-    status_msg = bot.reply_to(message, "⚡ Processing link...")
+    status_msg = bot.reply_to(message, "⚡ Downloading...")
     os.makedirs("downloads", exist_ok=True)
     
-    # STEALTH CONFIGURATION
+    # CORRECTED STEALTH CONFIGURATION
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': 'downloads/%(title)s_%(id)s.%(ext)s',
@@ -45,7 +45,6 @@ def download_video(message):
         'extractor_args': {
             'youtube': {
                 'player_client': ['web'],
-                'po_token': 'allow_transparent',
             }
         },
         'headers': {
@@ -68,6 +67,5 @@ def download_video(message):
         bot.delete_message(message.chat.id, status_msg.message_id)
     except Exception as e:
         bot.edit_message_text(f"❌ Error: {str(e)[:50]}", message.chat.id, status_msg.message_id)
-        print(f"DEBUG: {e}")
 
 bot.infinity_polling()
